@@ -10,10 +10,7 @@ use Carbon\Carbon;
 
 class SymptomLogController extends Controller
 {
-    public function __construct()
-    {
-        $this->middleware('auth:api');
-    }
+
 
     /**
      * Display a listing of symptom logs for the authenticated user.

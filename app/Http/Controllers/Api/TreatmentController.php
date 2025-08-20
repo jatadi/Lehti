@@ -10,10 +10,7 @@ use Carbon\Carbon;
 
 class TreatmentController extends Controller
 {
-    public function __construct()
-    {
-        $this->middleware('auth:api');
-    }
+
 
     /**
      * Display a listing of treatments for the authenticated user.
