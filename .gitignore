@@ -1,24 +1,81 @@
-*.log
-.DS_Store
+# Environment files
 .env
 .env.backup
 .env.production
-.phpactor.json
+.env.local
+.env.example.bak
+
+# Logs
+*.log
+storage/logs/*
+!storage/logs/.gitkeep
+
+# Database
+database/database.sqlite
+database/*.sqlite
+
+# Cache and compiled files
 .phpunit.result.cache
+bootstrap/cache/*
+!bootstrap/cache/.gitkeep
+storage/framework/cache/*
+!storage/framework/cache/.gitkeep
+storage/framework/sessions/*
+!storage/framework/sessions/.gitkeep
+storage/framework/views/*
+!storage/framework/views/.gitkeep
+
+# Dependencies
+/vendor
+/node_modules
+composer.lock
+
+# Build files
+/public/build
+/public/hot
+/public/storage
+
+# IDE and editor files
 /.fleet
 /.idea
 /.nova
 /.phpunit.cache
 /.vscode
 /.zed
+.phpactor.json
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Laravel specific
 /auth.json
-/node_modules
-/public/build
-/public/hot
-/public/storage
 /storage/*.key
 /storage/pail
-/vendor
 Homestead.json
 Homestead.yaml
-Thumbs.db
+npm-debug.log
+yarn-error.log
+
+# Documentation and development files
+CONTEXT.md
+TODO.md
+NOTES.md
+*.bak
+*.swp
+*.tmp
+
+# Test files
+test_api.php
+demo_api.php
+*.test.php
+
+# Deployment files (optional - remove if you want to track them)
+# Procfile
+# nixpacks.toml
+# railway.json

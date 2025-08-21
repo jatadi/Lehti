@@ -29,13 +29,7 @@
 
 ![Health Insights](screenshots/alerts.png)
 
-### Mobile Experience
-*Fully responsive design optimized for mobile use - all features work seamlessly on phones with touch-friendly interfaces and accessible navigation.*
 
-<div align="center">
-  <img src="screenshots/mobile-dashboard.png" alt="Mobile Dashboard" width="300"/>
-  <img src="screenshots/mobile-symptoms.png" alt="Mobile Symptoms" width="300"/>
-</div>
 
 ## ✨ Features
 
