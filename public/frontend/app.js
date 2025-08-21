@@ -475,17 +475,94 @@ class LehtiApp {
         this.loadSymptomsList();
     }
 
-    loadTreatments() {
+    async loadTreatments() {
         const content = document.getElementById('page-content');
         content.innerHTML = `
             <div class="page-header">
                 <h1>Treatments</h1>
                 <p>Manage your treatments and medications</p>
             </div>
-            <div class="page-content">
-                <p>Treatment management interface coming soon...</p>
+            
+            <div class="treatments-container">
+                <!-- Add Treatment Section -->
+                <div class="treatments-card">
+                    <h3>💊 Add New Treatment</h3>
+                    <form id="treatment-form" class="treatment-form">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="treatment-name">Treatment Name</label>
+                                <input type="text" id="treatment-name" name="name" required placeholder="e.g., Ibuprofen, Physical Therapy">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="treatment-type">Type</label>
+                                <select id="treatment-type" name="type" required>
+                                    <option value="">Select treatment type</option>
+                                    <option value="medication">💊 Medication</option>
+                                    <option value="therapy">🧘 Therapy</option>
+                                    <option value="exercise">🏃 Exercise</option>
+                                    <option value="diet">🥗 Diet</option>
+                                    <option value="supplement">🌿 Supplement</option>
+                                    <option value="procedure">🏥 Procedure</option>
+                                    <option value="lifestyle">🏡 Lifestyle</option>
+                                    <option value="other">📋 Other</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="treatment-dosage">Dosage/Frequency</label>
+                                <input type="text" id="treatment-dosage" name="dosage" placeholder="e.g., 200mg twice daily, 30 minutes daily">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="treatment-date">Date & Time</label>
+                                <input type="datetime-local" id="treatment-date" name="administered_at" required>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="treatment-notes">Notes (Optional)</label>
+                            <textarea id="treatment-notes" name="notes" rows="3" placeholder="Additional details, side effects, effectiveness, etc."></textarea>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary">
+                            <span class="btn-icon">✅</span>
+                            Add Treatment
+                        </button>
+                    </form>
+                </div>
+                
+                <!-- Recent Treatments -->
+                <div class="treatments-card">
+                    <div class="card-header">
+                        <h3>📋 Recent Treatments</h3>
+                        <div class="filter-controls">
+                            <select id="treatment-filter" class="filter-select">
+                                <option value="">All treatments</option>
+                                <option value="medication">💊 Medication</option>
+                                <option value="therapy">🧘 Therapy</option>
+                                <option value="exercise">🏃 Exercise</option>
+                                <option value="diet">🥗 Diet</option>
+                                <option value="supplement">🌿 Supplement</option>
+                                <option value="procedure">🏥 Procedure</option>
+                                <option value="lifestyle">🏡 Lifestyle</option>
+                                <option value="other">📋 Other</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div id="treatments-list" class="treatments-list">
+                        <div class="loading-placeholder">Loading treatments...</div>
+                    </div>
+                </div>
             </div>
         `;
+
+        this.addTreatmentsStyles();
+        this.bindTreatmentEvents();
+        this.setDefaultTreatmentDateTime();
+        this.loadTreatmentsList();
     }
 
     loadAlerts() {
@@ -780,6 +857,204 @@ class LehtiApp {
         if (severity <= 3) return 'low';
         if (severity <= 6) return 'medium';
         return 'high';
+    }
+
+    // Treatment Management Methods
+    bindTreatmentEvents() {
+        // Treatment form submission
+        const treatmentForm = document.getElementById('treatment-form');
+        if (treatmentForm) {
+            treatmentForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                this.handleTreatmentSubmit();
+            });
+        }
+
+        // Filter change
+        const filterSelect = document.getElementById('treatment-filter');
+        if (filterSelect) {
+            filterSelect.addEventListener('change', (e) => {
+                this.filterTreatments(e.target.value);
+            });
+        }
+    }
+
+    setDefaultTreatmentDateTime() {
+        const dateInput = document.getElementById('treatment-date');
+        if (dateInput) {
+            const now = new Date();
+            const localDateTime = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+            dateInput.value = localDateTime;
+        }
+    }
+
+    async handleTreatmentSubmit() {
+        const form = document.getElementById('treatment-form');
+        const submitBtn = form.querySelector('button[type="submit"]');
+        const formData = new FormData(form);
+
+        const treatmentData = {
+            name: formData.get('name').trim(),
+            type: formData.get('type'),
+            dosage: formData.get('dosage').trim() || null,
+            notes: formData.get('notes').trim() || null,
+            administered_at: formData.get('administered_at')
+        };
+
+        // Debug logging
+        console.log('Treatment data being submitted:', treatmentData);
+
+        // Validation
+        if (!treatmentData.name || !treatmentData.type || !treatmentData.administered_at) {
+            this.showToast('Please fill in all required fields', 'error');
+            console.log('Validation failed:', {
+                name: !!treatmentData.name,
+                type: !!treatmentData.type,
+                administered_at: !!treatmentData.administered_at
+            });
+            return;
+        }
+
+        // Convert datetime to proper format for Laravel
+        const formattedData = {
+            ...treatmentData,
+            administered_at: new Date(treatmentData.administered_at).toISOString().slice(0, 19).replace('T', ' ')
+        };
+
+        console.log('Formatted treatment data for API:', formattedData);
+
+        this.setFormLoading(form, true);
+        submitBtn.innerHTML = '<span class="btn-icon">⏳</span> Adding...';
+
+        try {
+            const response = await this.apiCall('POST', '/treatments', formattedData);
+            
+            if (response) {
+                this.showToast('Treatment added successfully!', 'success');
+                form.reset();
+                this.setDefaultTreatmentDateTime();
+                this.loadTreatmentsList();
+            }
+        } catch (error) {
+            console.error('Treatment submission error:', error);
+            console.error('Full error response:', error.message);
+            
+            let errorMessage = 'Failed to add treatment. Please try again.';
+            
+            if (error.message.includes('422')) {
+                errorMessage = 'Validation error. Check the browser console for details.';
+            } else if (error.message.includes('500')) {
+                errorMessage = 'Server error. Please try again later.';
+            } else if (error.message.includes('401')) {
+                errorMessage = 'Authentication error. Please login again.';
+            }
+            
+            this.showToast(errorMessage, 'error');
+        } finally {
+            this.setFormLoading(form, false);
+            submitBtn.innerHTML = '<span class="btn-icon">✅</span> Add Treatment';
+        }
+    }
+
+    async loadTreatmentsList() {
+        const listContainer = document.getElementById('treatments-list');
+        
+        try {
+            console.log('Loading treatments list...');
+            const response = await this.apiCall('GET', '/treatments?per_page=10');
+            console.log('Treatments API response:', response);
+            
+            if (response.data && response.data.length > 0) {
+                listContainer.innerHTML = response.data.map(treatment => `
+                    <div class="treatment-item" data-type="${treatment.type || 'other'}">
+                        <div class="treatment-icon">${this.getTreatmentEmoji(treatment.type || 'other')}</div>
+                        <div class="treatment-content">
+                            <div class="treatment-header">
+                                <span class="treatment-name">${treatment.name}</span>
+                                ${treatment.type ? `<span class="treatment-type">${this.formatTreatmentType(treatment.type)}</span>` : ''}
+                            </div>
+                            <div class="treatment-time">${this.formatDate(treatment.administered_at)}</div>
+                            ${treatment.dose ? `<div class="treatment-dosage">📏 ${treatment.dose}</div>` : ''}
+                            ${treatment.notes ? `<div class="treatment-notes">${treatment.notes}</div>` : ''}
+                        </div>
+                        <div class="treatment-actions">
+                            <button class="btn-icon-small" onclick="app.deleteTreatment(${treatment.id})" title="Delete">🗑️</button>
+                        </div>
+                    </div>
+                `).join('');
+            } else {
+                listContainer.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">💊</div>
+                        <h3>No treatments recorded yet</h3>
+                        <p>Start tracking your medications, therapies, and treatments.</p>
+                    </div>
+                `;
+            }
+        } catch (error) {
+            console.error('Failed to load treatments:', error);
+            listContainer.innerHTML = `
+                <div class="error-state">
+                    <div class="error-icon">❌</div>
+                    <h3>Failed to load treatments</h3>
+                    <p>Error: ${error.message}</p>
+                    <p>Check the browser console for details.</p>
+                </div>
+            `;
+        }
+    }
+
+    filterTreatments(type) {
+        const treatments = document.querySelectorAll('.treatment-item');
+        treatments.forEach(item => {
+            if (!type || item.dataset.type === type) {
+                item.style.display = 'flex';
+            } else {
+                item.style.display = 'none';
+            }
+        });
+    }
+
+    async deleteTreatment(id) {
+        if (!confirm('Are you sure you want to delete this treatment record?')) {
+            return;
+        }
+
+        try {
+            await this.apiCall('DELETE', `/treatments/${id}`);
+            this.showToast('Treatment deleted successfully', 'success');
+            this.loadTreatmentsList();
+        } catch (error) {
+            this.showToast('Failed to delete treatment', 'error');
+        }
+    }
+
+    getTreatmentEmoji(type) {
+        const emojis = {
+            'medication': '💊',
+            'therapy': '🧘',
+            'exercise': '🏃',
+            'diet': '🥗',
+            'supplement': '🌿',
+            'procedure': '🏥',
+            'lifestyle': '🏡',
+            'other': '📋'
+        };
+        return emojis[type] || '📋';
+    }
+
+    formatTreatmentType(type) {
+        const names = {
+            'medication': 'Medication',
+            'therapy': 'Therapy',
+            'exercise': 'Exercise',
+            'diet': 'Diet',
+            'supplement': 'Supplement',
+            'procedure': 'Procedure',
+            'lifestyle': 'Lifestyle',
+            'other': 'Other'
+        };
+        return names[type] || this.capitalizeFirst(type);
     }
 
     // Load saved credentials for "Remember Me" functionality
@@ -1311,6 +1586,179 @@ class LehtiApp {
         if (!document.querySelector('#symptoms-styles')) {
             const styleElement = document.createElement('div');
             styleElement.id = 'symptoms-styles';
+            styleElement.innerHTML = styles;
+            document.head.appendChild(styleElement);
+        }
+    }
+
+    addTreatmentsStyles() {
+        const styles = `
+            <style>
+            .treatments-container {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 2rem;
+                max-width: 1200px;
+                margin: 0 auto;
+            }
+
+            .treatments-card {
+                background: var(--white);
+                border-radius: var(--radius-lg);
+                padding: 1.5rem;
+                box-shadow: var(--shadow-sm);
+                border: 1px solid var(--gray-200);
+            }
+
+            .treatments-card h3 {
+                font-size: 1.25rem;
+                font-weight: 600;
+                color: var(--gray-900);
+                margin-bottom: 1.5rem;
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+            }
+
+            .treatment-form {
+                display: flex;
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .treatment-form select,
+            .treatment-form input,
+            .treatment-form textarea {
+                width: 100%;
+                padding: 0.75rem;
+                border: 2px solid var(--gray-200);
+                border-radius: var(--radius-lg);
+                font-size: var(--font-size-base);
+                transition: all 0.2s ease;
+            }
+
+            .treatment-form select:focus,
+            .treatment-form input:focus,
+            .treatment-form textarea:focus {
+                outline: none;
+                border-color: var(--primary-green);
+                box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+            }
+
+            .treatment-form textarea {
+                resize: vertical;
+                min-height: 80px;
+            }
+
+            .treatments-list {
+                max-height: 500px;
+                overflow-y: auto;
+                display: flex;
+                flex-direction: column;
+                gap: 0.75rem;
+            }
+
+            .treatment-item {
+                display: flex;
+                align-items: flex-start;
+                gap: 0.75rem;
+                padding: 1rem;
+                background: var(--green-50);
+                border-radius: var(--radius-lg);
+                border: 1px solid var(--green-100);
+                transition: all 0.2s ease;
+            }
+
+            .treatment-item:hover {
+                background: var(--green-100);
+                transform: translateY(-1px);
+                box-shadow: var(--shadow-sm);
+            }
+
+            .treatment-icon {
+                font-size: 1.5rem;
+                flex-shrink: 0;
+            }
+
+            .treatment-content {
+                flex: 1;
+                min-width: 0;
+            }
+
+            .treatment-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 0.25rem;
+                flex-wrap: wrap;
+                gap: 0.5rem;
+            }
+
+            .treatment-name {
+                font-weight: 600;
+                color: var(--gray-900);
+                font-size: 1rem;
+            }
+
+            .treatment-type {
+                font-size: 0.875rem;
+                font-weight: 500;
+                padding: 0.25rem 0.5rem;
+                border-radius: var(--radius-sm);
+                background: var(--primary-green);
+                color: var(--white);
+                white-space: nowrap;
+            }
+
+            .treatment-time {
+                font-size: 0.875rem;
+                color: var(--gray-600);
+                margin-bottom: 0.5rem;
+            }
+
+            .treatment-dosage {
+                font-size: 0.875rem;
+                color: var(--gray-700);
+                background: rgba(16, 185, 129, 0.1);
+                padding: 0.25rem 0.5rem;
+                border-radius: var(--radius-sm);
+                margin-bottom: 0.5rem;
+                display: inline-block;
+            }
+
+            .treatment-notes {
+                font-size: 0.875rem;
+                color: var(--gray-700);
+                background: var(--white);
+                padding: 0.5rem;
+                border-radius: var(--radius-md);
+                border-left: 3px solid var(--primary-green);
+            }
+
+            .treatment-actions {
+                display: flex;
+                gap: 0.25rem;
+                flex-shrink: 0;
+            }
+
+            @media (max-width: 768px) {
+                .treatments-container {
+                    grid-template-columns: 1fr;
+                    gap: 1rem;
+                }
+
+                .treatment-header {
+                    flex-direction: column;
+                    align-items: flex-start;
+                    gap: 0.5rem;
+                }
+            }
+            </style>
+        `;
+        
+        if (!document.querySelector('#treatments-styles')) {
+            const styleElement = document.createElement('div');
+            styleElement.id = 'treatments-styles';
             styleElement.innerHTML = styles;
             document.head.appendChild(styleElement);
         }

@@ -41,7 +41,9 @@ class TreatmentController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
-            'dose' => 'nullable|string|max:255',
+            'type' => 'nullable|in:medication,therapy,exercise,diet,supplement,procedure,lifestyle,other',
+            'dosage' => 'nullable|string|max:255', // Accept dosage but store as dose
+            'notes' => 'nullable|string|max:1000',
             'administered_at' => 'required|date',
         ]);
 
@@ -51,7 +53,9 @@ class TreatmentController extends Controller
 
         $treatment = auth()->user()->treatments()->create([
             'name' => $request->name,
-            'dose' => $request->dose,
+            'type' => $request->type,
+            'dose' => $request->dosage, // Map dosage to dose field
+            'notes' => $request->notes,
             'administered_at' => Carbon::parse($request->administered_at),
         ]);
 
