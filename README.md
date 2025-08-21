@@ -58,13 +58,13 @@
 
 ## 🚀 Live Demo
 
-Access the live application at: 
+### **🌐 [Try Lehti Live →](https://web-production-e0ba7.up.railway.app/frontend)**
 
 **Demo Credentials:**
-- Email: `demo@folia.com`
-- Password: `password123`
+- **Email:** `demo@folia.com`
+- **Password:** `password123`
 
-*The demo includes 30+ days of realistic health data with AI-generated insights.*
+*The demo includes 38 symptom logs, 125 treatments, and 6 AI-generated health insights.*
 
 ## 🛠️ Technology Stack
 
