@@ -1,0 +1,28 @@
+services:
+  - type: web
+    name: lehti
+    env: php
+    buildCommand: |
+      composer install --no-dev --optimize-autoloader
+      mkdir -p database
+      touch database/database.sqlite
+      chmod 664 database/database.sqlite
+      php artisan migrate --force
+      php artisan db:seed --class=HealthPatternsSeeder --force
+      php artisan config:cache
+      php artisan route:cache
+      php artisan view:cache
+    startCommand: php artisan serve --host=0.0.0.0 --port=$PORT
+    envVars:
+      - key: APP_NAME
+        value: Lehti
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: false
+      - key: APP_KEY
+        value: base64:ozhvevPmZJgRrPXwacgYsX9EbobV0B1rRSVIz8zGs48=
+      - key: JWT_SECRET
+        value: Nqglr8ZmBy9ip0s0HDnPYAN3LKKcjUHSMd4ix443Mg2LQHAqnwgmnq16DbO0tdcX
+      - key: DB_CONNECTION
+        value: sqlite
