@@ -370,17 +370,96 @@ class LehtiApp {
         }
     }
 
-    loadSymptoms() {
+    async loadSymptoms() {
         const content = document.getElementById('page-content');
         content.innerHTML = `
             <div class="page-header">
                 <h1>Symptoms</h1>
                 <p>Track and manage your symptoms</p>
             </div>
-            <div class="page-content">
-                <p>Symptom logging interface coming soon...</p>
+            
+            <div class="symptoms-container">
+                <!-- Quick Log Section -->
+                <div class="symptoms-card">
+                    <h3>📝 Log New Symptom</h3>
+                    <form id="symptom-form" class="symptom-form">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="symptom-type">Symptom Type</label>
+                                <select id="symptom-type" name="type" required>
+                                    <option value="">Select symptom type</option>
+                                    <option value="fatigue">💤 Fatigue</option>
+                                    <option value="pain">⚡ Pain</option>
+                                    <option value="nausea">🤢 Nausea</option>
+                                    <option value="headache">🤕 Headache</option>
+                                    <option value="dizziness">💫 Dizziness</option>
+                                    <option value="insomnia">🌙 Insomnia</option>
+                                    <option value="anxiety">😰 Anxiety</option>
+                                    <option value="fever">🌡️ Fever</option>
+                                    <option value="other">📋 Other</option>
+                                </select>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="symptom-severity">Severity (1-10)</label>
+                                <div class="severity-slider">
+                                    <input type="range" id="symptom-severity" name="severity" min="1" max="10" value="5" required>
+                                    <div class="severity-labels">
+                                        <span>1<br><small>Mild</small></span>
+                                        <span>5<br><small>Moderate</small></span>
+                                        <span>10<br><small>Severe</small></span>
+                                    </div>
+                                    <div class="severity-value">
+                                        <span id="severity-display">5</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="symptom-notes">Notes (Optional)</label>
+                            <textarea id="symptom-notes" name="notes" rows="3" placeholder="Describe what you're experiencing, triggers, location, etc."></textarea>
+                        </div>
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="symptom-date">Date & Time</label>
+                                <input type="datetime-local" id="symptom-date" name="occurred_at" required>
+                            </div>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary">
+                            <span class="btn-icon">✅</span>
+                            Log Symptom
+                        </button>
+                    </form>
+                </div>
+                
+                <!-- Recent Symptoms -->
+                <div class="symptoms-card">
+                    <div class="card-header">
+                        <h3>📊 Recent Symptoms</h3>
+                        <div class="filter-controls">
+                            <select id="symptom-filter" class="filter-select">
+                                <option value="">All symptoms</option>
+                                <option value="fatigue">Fatigue</option>
+                                <option value="pain">Pain</option>
+                                <option value="nausea">Nausea</option>
+                                <option value="headache">Headache</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div id="symptoms-list" class="symptoms-list">
+                        <div class="loading-placeholder">Loading symptoms...</div>
+                    </div>
+                </div>
             </div>
         `;
+
+        this.addSymptomsStyles();
+        this.bindSymptomEvents();
+        this.setDefaultDateTime();
+        this.loadSymptomsList();
     }
 
     loadTreatments() {
@@ -441,6 +520,205 @@ class LehtiApp {
             console.error('API call failed:', error);
             throw error;
         }
+    }
+
+    // Symptom Management Methods
+    bindSymptomEvents() {
+        // Severity slider
+        const severitySlider = document.getElementById('symptom-severity');
+        const severityDisplay = document.getElementById('severity-display');
+        
+        if (severitySlider && severityDisplay) {
+            severitySlider.addEventListener('input', (e) => {
+                severityDisplay.textContent = e.target.value;
+                this.updateSeverityColor(e.target.value);
+            });
+        }
+
+        // Symptom form submission
+        const symptomForm = document.getElementById('symptom-form');
+        if (symptomForm) {
+            symptomForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                this.handleSymptomSubmit();
+            });
+        }
+
+        // Filter change
+        const filterSelect = document.getElementById('symptom-filter');
+        if (filterSelect) {
+            filterSelect.addEventListener('change', (e) => {
+                this.filterSymptoms(e.target.value);
+            });
+        }
+    }
+
+    setDefaultDateTime() {
+        const dateInput = document.getElementById('symptom-date');
+        if (dateInput) {
+            const now = new Date();
+            const localDateTime = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+            dateInput.value = localDateTime;
+        }
+    }
+
+    updateSeverityColor(value) {
+        const severityDisplay = document.getElementById('severity-display');
+        if (!severityDisplay) return;
+
+        const severity = parseInt(value);
+        let color = 'var(--primary-green)';
+        
+        if (severity <= 3) {
+            color = 'var(--success)';
+        } else if (severity <= 6) {
+            color = 'var(--warning)';
+        } else {
+            color = 'var(--error)';
+        }
+        
+        severityDisplay.style.color = color;
+        severityDisplay.style.fontWeight = '600';
+    }
+
+    async handleSymptomSubmit() {
+        const form = document.getElementById('symptom-form');
+        const submitBtn = form.querySelector('button[type="submit"]');
+        const formData = new FormData(form);
+
+        const symptomData = {
+            type: formData.get('type'),
+            severity: parseInt(formData.get('severity')),
+            notes: formData.get('notes') || null,
+            occurred_at: formData.get('occurred_at')
+        };
+
+        // Validation
+        if (!symptomData.type || !symptomData.severity || !symptomData.occurred_at) {
+            this.showToast('Please fill in all required fields', 'error');
+            return;
+        }
+
+        this.setFormLoading(form, true);
+        submitBtn.innerHTML = '<span class="btn-icon">⏳</span> Logging...';
+
+        try {
+            const response = await this.apiCall('POST', '/symptom-logs', symptomData);
+            
+            if (response) {
+                this.showToast('Symptom logged successfully!', 'success');
+                form.reset();
+                this.setDefaultDateTime();
+                this.loadSymptomsList();
+                
+                // Reset severity display
+                document.getElementById('severity-display').textContent = '5';
+                this.updateSeverityColor(5);
+            }
+        } catch (error) {
+            console.error('Symptom submission error:', error);
+            let errorMessage = 'Failed to log symptom. Please try again.';
+            
+            if (error.message.includes('422')) {
+                errorMessage = 'Please check your input and try again.';
+            } else if (error.message.includes('500')) {
+                errorMessage = 'Server error. Please try again later.';
+            }
+            
+            this.showToast(errorMessage, 'error');
+        } finally {
+            this.setFormLoading(form, false);
+            submitBtn.innerHTML = '<span class="btn-icon">✅</span> Log Symptom';
+        }
+    }
+
+    async loadSymptomsList() {
+        const listContainer = document.getElementById('symptoms-list');
+        
+        try {
+            const response = await this.apiCall('GET', '/symptom-logs?per_page=10');
+            
+            if (response.data && response.data.length > 0) {
+                listContainer.innerHTML = response.data.map(symptom => `
+                    <div class="symptom-item" data-type="${symptom.type}">
+                        <div class="symptom-icon">${this.getSymptomEmoji(symptom.type)}</div>
+                        <div class="symptom-content">
+                            <div class="symptom-header">
+                                <span class="symptom-type">${this.capitalizeFirst(symptom.type)}</span>
+                                <span class="symptom-severity severity-${this.getSeverityLevel(symptom.severity)}">${symptom.severity}/10</span>
+                            </div>
+                            <div class="symptom-time">${this.formatDate(symptom.occurred_at)}</div>
+                            ${symptom.notes ? `<div class="symptom-notes">${symptom.notes}</div>` : ''}
+                        </div>
+                        <div class="symptom-actions">
+                            <button class="btn-icon-small" onclick="app.deleteSymptom(${symptom.id})" title="Delete">🗑️</button>
+                        </div>
+                    </div>
+                `).join('');
+            } else {
+                listContainer.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">📝</div>
+                        <h3>No symptoms logged yet</h3>
+                        <p>Start tracking your symptoms to identify patterns and triggers.</p>
+                    </div>
+                `;
+            }
+        } catch (error) {
+            listContainer.innerHTML = `
+                <div class="error-state">
+                    <div class="error-icon">❌</div>
+                    <h3>Failed to load symptoms</h3>
+                    <p>Please try refreshing the page.</p>
+                </div>
+            `;
+        }
+    }
+
+    filterSymptoms(type) {
+        const symptoms = document.querySelectorAll('.symptom-item');
+        symptoms.forEach(symptom => {
+            if (!type || symptom.dataset.type === type) {
+                symptom.style.display = 'flex';
+            } else {
+                symptom.style.display = 'none';
+            }
+        });
+    }
+
+    async deleteSymptom(id) {
+        if (!confirm('Are you sure you want to delete this symptom log?')) {
+            return;
+        }
+
+        try {
+            await this.apiCall('DELETE', `/symptom-logs/${id}`);
+            this.showToast('Symptom deleted successfully', 'success');
+            this.loadSymptomsList();
+        } catch (error) {
+            this.showToast('Failed to delete symptom', 'error');
+        }
+    }
+
+    getSymptomEmoji(type) {
+        const emojis = {
+            'fatigue': '💤',
+            'pain': '⚡',
+            'nausea': '🤢',
+            'headache': '🤕',
+            'dizziness': '💫',
+            'insomnia': '🌙',
+            'anxiety': '😰',
+            'fever': '🌡️',
+            'other': '📋'
+        };
+        return emojis[type] || '📋';
+    }
+
+    getSeverityLevel(severity) {
+        if (severity <= 3) return 'low';
+        if (severity <= 6) return 'medium';
+        return 'high';
     }
 
     // Load saved credentials for "Remember Me" functionality
@@ -518,6 +796,10 @@ class LehtiApp {
         if (diffDays < 7) return `${diffDays}d ago`;
         
         return date.toLocaleDateString();
+    }
+
+    capitalizeFirst(str) {
+        return str.charAt(0).toUpperCase() + str.slice(1);
     }
 
     addDashboardStyles() {
@@ -640,6 +922,334 @@ class LehtiApp {
         if (!document.querySelector('#dashboard-styles')) {
             const styleElement = document.createElement('div');
             styleElement.id = 'dashboard-styles';
+            styleElement.innerHTML = styles;
+            document.head.appendChild(styleElement);
+        }
+    }
+
+    addSymptomsStyles() {
+        const styles = `
+            <style>
+            .symptoms-container {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 2rem;
+                max-width: 1200px;
+                margin: 0 auto;
+            }
+
+            .symptoms-card {
+                background: var(--white);
+                border-radius: var(--radius-lg);
+                padding: 1.5rem;
+                box-shadow: var(--shadow-sm);
+                border: 1px solid var(--gray-200);
+            }
+
+            .symptoms-card h3 {
+                font-size: 1.25rem;
+                font-weight: 600;
+                color: var(--gray-900);
+                margin-bottom: 1.5rem;
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+            }
+
+            .card-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 1.5rem;
+            }
+
+            .filter-controls {
+                display: flex;
+                gap: 0.5rem;
+            }
+
+            .filter-select {
+                padding: 0.5rem 0.75rem;
+                border: 1px solid var(--gray-300);
+                border-radius: var(--radius-md);
+                font-size: 0.875rem;
+                background: var(--white);
+                cursor: pointer;
+            }
+
+            .filter-select:focus {
+                outline: none;
+                border-color: var(--primary-green);
+                box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.1);
+            }
+
+            .symptom-form {
+                display: flex;
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .form-row {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 1rem;
+            }
+
+            .symptom-form select,
+            .symptom-form textarea,
+            .symptom-form input[type="datetime-local"] {
+                width: 100%;
+                padding: 0.75rem;
+                border: 2px solid var(--gray-200);
+                border-radius: var(--radius-lg);
+                font-size: var(--font-size-base);
+                transition: all 0.2s ease;
+            }
+
+            .symptom-form select:focus,
+            .symptom-form textarea:focus,
+            .symptom-form input[type="datetime-local"]:focus {
+                outline: none;
+                border-color: var(--primary-green);
+                box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+            }
+
+            .symptom-form textarea {
+                resize: vertical;
+                min-height: 80px;
+            }
+
+            .severity-slider {
+                position: relative;
+                padding: 1rem 0;
+            }
+
+            .severity-slider input[type="range"] {
+                width: 100%;
+                height: 6px;
+                border-radius: 3px;
+                background: var(--gray-200);
+                outline: none;
+                -webkit-appearance: none;
+                appearance: none;
+                margin: 0.5rem 0;
+            }
+
+            .severity-slider input[type="range"]::-webkit-slider-thumb {
+                -webkit-appearance: none;
+                appearance: none;
+                width: 20px;
+                height: 20px;
+                border-radius: 50%;
+                background: var(--primary-green);
+                cursor: pointer;
+                border: 2px solid var(--white);
+                box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            }
+
+            .severity-slider input[type="range"]::-moz-range-thumb {
+                width: 20px;
+                height: 20px;
+                border-radius: 50%;
+                background: var(--primary-green);
+                cursor: pointer;
+                border: 2px solid var(--white);
+                box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            }
+
+            .severity-labels {
+                display: flex;
+                justify-content: space-between;
+                font-size: 0.75rem;
+                color: var(--gray-600);
+                margin-top: 0.5rem;
+            }
+
+            .severity-labels small {
+                font-size: 0.625rem;
+                color: var(--gray-500);
+            }
+
+            .severity-value {
+                position: absolute;
+                top: -0.5rem;
+                left: 50%;
+                transform: translateX(-50%);
+                background: var(--primary-green);
+                color: var(--white);
+                padding: 0.25rem 0.5rem;
+                border-radius: var(--radius-md);
+                font-size: 0.875rem;
+                font-weight: 600;
+            }
+
+            .btn-icon {
+                margin-right: 0.5rem;
+            }
+
+            .symptoms-list {
+                max-height: 500px;
+                overflow-y: auto;
+                display: flex;
+                flex-direction: column;
+                gap: 0.75rem;
+            }
+
+            .symptom-item {
+                display: flex;
+                align-items: flex-start;
+                gap: 0.75rem;
+                padding: 1rem;
+                background: var(--green-50);
+                border-radius: var(--radius-lg);
+                border: 1px solid var(--green-100);
+                transition: all 0.2s ease;
+            }
+
+            .symptom-item:hover {
+                background: var(--green-100);
+                transform: translateY(-1px);
+                box-shadow: var(--shadow-sm);
+            }
+
+            .symptom-icon {
+                font-size: 1.5rem;
+                flex-shrink: 0;
+            }
+
+            .symptom-content {
+                flex: 1;
+                min-width: 0;
+            }
+
+            .symptom-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 0.25rem;
+            }
+
+            .symptom-type {
+                font-weight: 600;
+                color: var(--gray-900);
+                font-size: 1rem;
+            }
+
+            .symptom-severity {
+                font-size: 0.875rem;
+                font-weight: 600;
+                padding: 0.25rem 0.5rem;
+                border-radius: var(--radius-sm);
+                background: var(--white);
+            }
+
+            .symptom-severity.severity-low {
+                color: var(--success);
+                background: rgba(16, 185, 129, 0.1);
+            }
+
+            .symptom-severity.severity-medium {
+                color: var(--warning);
+                background: rgba(245, 158, 11, 0.1);
+            }
+
+            .symptom-severity.severity-high {
+                color: var(--error);
+                background: rgba(239, 68, 68, 0.1);
+            }
+
+            .symptom-time {
+                font-size: 0.875rem;
+                color: var(--gray-600);
+                margin-bottom: 0.5rem;
+            }
+
+            .symptom-notes {
+                font-size: 0.875rem;
+                color: var(--gray-700);
+                background: var(--white);
+                padding: 0.5rem;
+                border-radius: var(--radius-md);
+                border-left: 3px solid var(--primary-green);
+            }
+
+            .symptom-actions {
+                display: flex;
+                gap: 0.25rem;
+                flex-shrink: 0;
+            }
+
+            .btn-icon-small {
+                background: none;
+                border: none;
+                padding: 0.25rem;
+                border-radius: var(--radius-sm);
+                cursor: pointer;
+                font-size: 0.875rem;
+                opacity: 0.7;
+                transition: all 0.2s ease;
+            }
+
+            .btn-icon-small:hover {
+                opacity: 1;
+                background: var(--white);
+                transform: scale(1.1);
+            }
+
+            .empty-state,
+            .error-state {
+                text-align: center;
+                padding: 2rem;
+                color: var(--gray-600);
+            }
+
+            .empty-icon,
+            .error-icon {
+                font-size: 3rem;
+                margin-bottom: 1rem;
+            }
+
+            .empty-state h3,
+            .error-state h3 {
+                color: var(--gray-800);
+                margin-bottom: 0.5rem;
+            }
+
+            .loading-placeholder {
+                text-align: center;
+                padding: 2rem;
+                color: var(--gray-600);
+                font-style: italic;
+            }
+
+            @media (max-width: 768px) {
+                .symptoms-container {
+                    grid-template-columns: 1fr;
+                    gap: 1rem;
+                }
+
+                .form-row {
+                    grid-template-columns: 1fr;
+                }
+
+                .card-header {
+                    flex-direction: column;
+                    align-items: flex-start;
+                    gap: 1rem;
+                }
+
+                .symptom-header {
+                    flex-direction: column;
+                    align-items: flex-start;
+                    gap: 0.5rem;
+                }
+            }
+            </style>
+        `;
+        
+        if (!document.querySelector('#symptoms-styles')) {
+            const styleElement = document.createElement('div');
+            styleElement.id = 'symptoms-styles';
             styleElement.innerHTML = styles;
             document.head.appendChild(styleElement);
         }
