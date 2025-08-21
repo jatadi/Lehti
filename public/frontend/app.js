@@ -284,33 +284,150 @@ class LehtiApp {
         content.innerHTML = `
             <div class="page-header">
                 <h1>Dashboard</h1>
-                <p>Overview of your health data</p>
+                <p>Your personalized health insights at a glance</p>
             </div>
             
-            <div class="dashboard-grid">
-                <div class="dashboard-card">
-                    <h3>Quick Actions</h3>
-                    <div class="quick-actions">
-                        <button class="btn btn-primary" onclick="app.navigateTo('symptoms')">Log Symptom</button>
-                        <button class="btn btn-outline" onclick="app.navigateTo('treatments')">Add Treatment</button>
+            <div class="dashboard-container">
+                <!-- Quick Stats -->
+                <div class="dashboard-section">
+                    <h3>📊 Health Overview</h3>
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-icon">🤒</div>
+                            <div class="stat-info">
+                                <span class="stat-number" id="total-symptoms">-</span>
+                                <span class="stat-label">Symptoms Logged</span>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">💊</div>
+                            <div class="stat-info">
+                                <span class="stat-number" id="total-treatments">-</span>
+                                <span class="stat-label">Treatments Taken</span>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">🔔</div>
+                            <div class="stat-info">
+                                <span class="stat-number" id="active-alerts">-</span>
+                                <span class="stat-label">Active Insights</span>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">📈</div>
+                            <div class="stat-info">
+                                <span class="stat-number" id="days-tracking">-</span>
+                                <span class="stat-label">Days Tracking</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
-                
-                <div class="dashboard-card">
-                    <h3>Recent Activity</h3>
-                    <div id="recent-activity">Loading...</div>
+
+                <!-- Quick Actions -->
+                <div class="dashboard-section">
+                    <h3>⚡ Quick Actions</h3>
+                    <div class="quick-actions">
+                        <button class="action-card" onclick="app.navigateTo('symptoms')">
+                            <div class="action-icon">🤒</div>
+                            <div class="action-content">
+                                <h4>Log Symptom</h4>
+                                <p>Track how you're feeling right now</p>
+                            </div>
+                        </button>
+                        <button class="action-card" onclick="app.navigateTo('treatments')">
+                            <div class="action-icon">💊</div>
+                            <div class="action-content">
+                                <h4>Add Treatment</h4>
+                                <p>Record medications or therapies</p>
+                            </div>
+                        </button>
+                        <button class="action-card" onclick="app.navigateTo('alerts')">
+                            <div class="action-icon">🔔</div>
+                            <div class="action-content">
+                                <h4>View Insights</h4>
+                                <p>See AI-powered health patterns</p>
+                            </div>
+                        </button>
+                    </div>
                 </div>
-                
-                <div class="dashboard-card">
-                    <h3>Active Alerts</h3>
-                    <div id="active-alerts">Loading...</div>
+
+                <!-- Getting Started Guide -->
+                <div class="dashboard-section" id="getting-started">
+                    <h3>🚀 Getting Started</h3>
+                    <div class="guide-steps">
+                        <div class="step-card" id="step-symptoms">
+                            <div class="step-number">1</div>
+                            <div class="step-content">
+                                <h4>Start Logging Symptoms</h4>
+                                <p>Track how you feel daily - pain, fatigue, mood, etc. The more data you provide, the better insights you'll get.</p>
+                                <button class="step-action" onclick="app.navigateTo('symptoms')">Log First Symptom</button>
+                            </div>
+                        </div>
+                        <div class="step-card" id="step-treatments">
+                            <div class="step-number">2</div>
+                            <div class="step-content">
+                                <h4>Record Treatments</h4>
+                                <p>Log medications, therapies, exercises, and lifestyle changes to find what works best for you.</p>
+                                <button class="step-action" onclick="app.navigateTo('treatments')">Add Treatment</button>
+                            </div>
+                        </div>
+                        <div class="step-card" id="step-patterns">
+                            <div class="step-number">3</div>
+                            <div class="step-content">
+                                <h4>Discover Patterns</h4>
+                                <p>After a few days of data, AI will identify patterns and give you personalized health insights.</p>
+                                <button class="step-action" onclick="app.navigateTo('alerts'); app.recomputeAlerts()">Generate Insights</button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         `;
-
+        
         this.addDashboardStyles();
-        this.loadRecentActivity();
-        this.loadActiveAlerts();
+        this.loadDashboardStats();
+    }
+
+    async loadDashboardStats() {
+        try {
+            // Load all stats in parallel
+            const [symptomsRes, treatmentsRes, alertsRes] = await Promise.all([
+                this.apiCall('GET', '/symptom-logs'),
+                this.apiCall('GET', '/treatments'),
+                this.apiCall('GET', '/alerts?resolved=all')
+            ]);
+
+            const symptoms = symptomsRes.data || [];
+            const treatments = treatmentsRes.data || [];
+            const alerts = alertsRes.data || [];
+
+            // Calculate stats
+            const totalSymptoms = symptoms.length;
+            const totalTreatments = treatments.length;
+            const activeAlerts = alerts.filter(a => !a.resolved_at).length;
+            
+            // Calculate days tracking (based on earliest entry)
+            const allDates = [
+                ...symptoms.map(s => new Date(s.occurred_at)),
+                ...treatments.map(t => new Date(t.administered_at))
+            ];
+            
+            let daysTracking = 0;
+            if (allDates.length > 0) {
+                const earliestDate = new Date(Math.min(...allDates));
+                const daysDiff = Math.floor((new Date() - earliestDate) / (1000 * 60 * 60 * 24));
+                daysTracking = Math.max(1, daysDiff);
+            }
+
+            // Update UI
+            document.getElementById('total-symptoms').textContent = totalSymptoms;
+            document.getElementById('total-treatments').textContent = totalTreatments;
+            document.getElementById('active-alerts').textContent = activeAlerts;
+            document.getElementById('days-tracking').textContent = daysTracking;
+
+        } catch (error) {
+            console.error('Failed to load dashboard stats:', error);
+        }
     }
 
     async loadRecentActivity() {
@@ -350,7 +467,7 @@ class LehtiApp {
 
     async loadActiveAlerts() {
         try {
-            const alerts = await this.apiCall('GET', '/alerts');
+            const alerts = await this.apiCall('GET', '/alerts?resolved=false');
             const alertsContainer = document.getElementById('active-alerts');
 
             if (alerts.data.length > 0) {
@@ -585,7 +702,7 @@ class LehtiApp {
                         <div class="alert-filters">
                             <select id="alert-filter" class="filter-select">
                                 <option value="">All alerts</option>
-                                <option value="unresolved">🔴 Unresolved</option>
+                                <option value="unresolved" selected>🔴 Unresolved</option>
                                 <option value="resolved">✅ Resolved</option>
                             </select>
                             <select id="alert-severity" class="filter-select">
@@ -633,6 +750,11 @@ class LehtiApp {
         this.bindAlertEvents();
         this.loadAlertsList();
         this.updateAlertStats();
+        
+        // Apply default filter after loading
+        setTimeout(() => {
+            this.filterAlerts();
+        }, 100);
     }
 
     // API Methods
@@ -1166,12 +1288,12 @@ class LehtiApp {
         
         try {
             console.log('Loading alerts list...');
-            const response = await this.apiCall('GET', '/alerts');
+            const response = await this.apiCall('GET', '/alerts?resolved=all');
             console.log('Alerts API response:', response);
             
             if (response.data && response.data.length > 0) {
                 listContainer.innerHTML = response.data.map(alert => `
-                    <div class="alert-item" data-severity="${this.getSeverityName(alert.severity)}" data-resolved="${alert.resolved_at ? 'resolved' : 'unresolved'}">
+                    <div class="alert-item" data-alert-id="${alert.id}" data-severity="${this.getSeverityName(alert.severity)}" data-resolved="${alert.resolved_at ? 'resolved' : 'unresolved'}">
                         <div class="alert-indicator severity-${this.getSeverityName(alert.severity)}"></div>
                         <div class="alert-content">
                             <div class="alert-header">
@@ -1223,7 +1345,7 @@ class LehtiApp {
 
     async updateAlertStats() {
         try {
-            const response = await this.apiCall('GET', '/alerts');
+            const response = await this.apiCall('GET', '/alerts?resolved=all');
             const alerts = response.data || [];
             
             const totalAlerts = alerts.length;
@@ -1264,7 +1386,24 @@ class LehtiApp {
         try {
             await this.apiCall('POST', `/alerts/${id}/resolve`);
             this.showToast('Alert marked as resolved', 'success');
-            this.loadAlertsList();
+            
+            // Update the specific alert item in the DOM
+            const alertElement = document.querySelector(`[data-alert-id="${id}"]`);
+            if (alertElement) {
+                // Update the data attribute
+                alertElement.setAttribute('data-resolved', 'resolved');
+                
+                // Replace the resolve button with resolved indicator
+                const actionsDiv = alertElement.querySelector('.alert-actions');
+                if (actionsDiv) {
+                    const now = new Date().toISOString();
+                    actionsDiv.innerHTML = `<span class="resolved-indicator" title="Resolved ${this.formatDate(now)}">✅</span>`;
+                }
+                
+                // Apply current filters to show/hide the alert
+                this.filterAlerts();
+            }
+            
             this.updateAlertStats();
         } catch (error) {
             console.error('Failed to resolve alert:', error);
@@ -1422,36 +1561,185 @@ class LehtiApp {
                 font-size: 1.125rem;
             }
             
-            .dashboard-grid {
-                display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-                gap: 1.5rem;
+            .dashboard-container {
+                max-width: 1200px;
+                margin: 0 auto;
+                display: flex;
+                flex-direction: column;
+                gap: 2rem;
             }
-            
-            .dashboard-card {
+
+            .dashboard-section {
                 background: var(--white);
                 border-radius: var(--radius-lg);
                 padding: 1.5rem;
                 box-shadow: var(--shadow-sm);
                 border: 1px solid var(--gray-200);
             }
-            
-            .dashboard-card h3 {
+
+            .dashboard-section h3 {
                 font-size: 1.25rem;
                 font-weight: 600;
                 color: var(--gray-900);
-                margin-bottom: 1rem;
-            }
-            
-            .quick-actions {
+                margin-bottom: 1.5rem;
                 display: flex;
-                gap: 1rem;
-                flex-wrap: wrap;
+                align-items: center;
+                gap: 0.5rem;
             }
-            
-            .quick-actions .btn {
+
+            .stats-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                gap: 1rem;
+            }
+
+            .stat-card {
+                background: var(--green-50);
+                border: 1px solid var(--green-100);
+                border-radius: var(--radius-lg);
+                padding: 1.5rem;
+                display: flex;
+                align-items: center;
+                gap: 1rem;
+                transition: transform 0.2s ease, box-shadow 0.2s ease;
+            }
+
+            .stat-card:hover {
+                transform: translateY(-2px);
+                box-shadow: var(--shadow-md);
+            }
+
+            .stat-icon {
+                font-size: 2rem;
+                flex-shrink: 0;
+            }
+
+            .stat-info {
                 flex: 1;
-                min-width: 120px;
+            }
+
+            .stat-number {
+                display: block;
+                font-size: 2rem;
+                font-weight: 700;
+                color: var(--primary-green);
+                line-height: 1;
+                margin-bottom: 0.25rem;
+            }
+
+            .stat-label {
+                font-size: 0.875rem;
+                color: var(--gray-600);
+                font-weight: 500;
+            }
+
+            .quick-actions {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+                gap: 1rem;
+            }
+
+            .action-card {
+                background: var(--white);
+                border: 2px solid var(--gray-200);
+                border-radius: var(--radius-lg);
+                padding: 1.5rem;
+                display: flex;
+                align-items: center;
+                gap: 1rem;
+                text-align: left;
+                cursor: pointer;
+                transition: all 0.2s ease;
+                text-decoration: none;
+                color: inherit;
+            }
+
+            .action-card:hover {
+                border-color: var(--primary-green);
+                transform: translateY(-2px);
+                box-shadow: var(--shadow-md);
+            }
+
+            .action-icon {
+                font-size: 2rem;
+                flex-shrink: 0;
+            }
+
+            .action-content h4 {
+                font-size: 1.125rem;
+                font-weight: 600;
+                color: var(--gray-900);
+                margin-bottom: 0.25rem;
+            }
+
+            .action-content p {
+                font-size: 0.875rem;
+                color: var(--gray-600);
+                margin: 0;
+            }
+
+            .guide-steps {
+                display: flex;
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .step-card {
+                display: flex;
+                align-items: flex-start;
+                gap: 1rem;
+                padding: 1.5rem;
+                background: var(--gray-50);
+                border-radius: var(--radius-lg);
+                border: 1px solid var(--gray-200);
+            }
+
+            .step-number {
+                width: 2.5rem;
+                height: 2.5rem;
+                background: var(--primary-green);
+                color: var(--white);
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-weight: 700;
+                font-size: 1.125rem;
+                flex-shrink: 0;
+            }
+
+            .step-content {
+                flex: 1;
+            }
+
+            .step-content h4 {
+                font-size: 1.125rem;
+                font-weight: 600;
+                color: var(--gray-900);
+                margin-bottom: 0.5rem;
+            }
+
+            .step-content p {
+                font-size: 0.875rem;
+                color: var(--gray-600);
+                margin-bottom: 1rem;
+                line-height: 1.5;
+            }
+
+            .step-action {
+                background: var(--primary-green);
+                color: var(--white);
+                border: none;
+                padding: 0.5rem 1rem;
+                border-radius: var(--radius-md);
+                font-size: 0.875rem;
+                font-weight: 500;
+                cursor: pointer;
+                transition: background-color 0.2s ease;
+            }
+
+            .step-action:hover {
+                background: var(--primary-green-dark);
             }
             
             .activity-item, .alert-item {

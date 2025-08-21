@@ -13,7 +13,9 @@ class Treatment extends Model
     protected $fillable = [
         'user_id',
         'name',
+        'type',
         'dose',
+        'notes',
         'administered_at',
     ];
 

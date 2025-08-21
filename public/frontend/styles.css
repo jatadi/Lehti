@@ -4,6 +4,8 @@
     --primary-green: #10B981;      /* emerald-500 */
     --primary-green-dark: #059669; /* emerald-600 */
     --primary-green-light: #34D399; /* emerald-400 */
+    --sage-green: #87A96B;         /* sage green */
+    --sage-green-dark: #6B8E4D;    /* darker sage */
     --green-50: #ECFDF5;
     --green-100: #D1FAE5;
     --green-900: #064E3B;
@@ -229,6 +231,24 @@ body {
 
 .form-group input::placeholder {
     color: var(--gray-400);
+    opacity: 0.6;
+}
+
+.form-group input:focus::placeholder {
+    opacity: 0.3;
+}
+
+.form-group textarea::placeholder {
+    color: var(--gray-400);
+    opacity: 0.6;
+}
+
+.form-group textarea:focus::placeholder {
+    opacity: 0.3;
+}
+
+.form-group select {
+    color: var(--gray-700);
 }
 
 .form-group input:disabled {

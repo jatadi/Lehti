@@ -26,9 +26,10 @@ class AlertController extends Controller
         if ($request->has('resolved')) {
             if ($request->resolved === 'true') {
                 $query->resolved();
-            } else {
+            } elseif ($request->resolved === 'false') {
                 $query->unresolved();
             }
+            // If resolved=all, don't filter - show both resolved and unresolved
         } else {
             // Default to unresolved alerts
             $query->unresolved();
