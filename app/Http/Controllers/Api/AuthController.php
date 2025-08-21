@@ -37,7 +37,9 @@ class AuthController extends Controller
         return response()->json([
             'user' => $user,
             'token' => $token,
-        ], 201);
+        ], 201)->header('Access-Control-Allow-Origin', '*')
+                ->header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+                ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
     }
 
     /**
@@ -63,7 +65,9 @@ class AuthController extends Controller
         return response()->json([
             'user' => auth()->user(),
             'token' => $token,
-        ]);
+        ])->header('Access-Control-Allow-Origin', '*')
+          ->header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+          ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
     }
 
     /**
