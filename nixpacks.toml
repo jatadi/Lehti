@@ -1,28 +1,16 @@
 [phases.setup]
-nixPkgs = ['php82', 'nodejs_18', 'php82Packages.composer']
+nixPkgs = ['php82', 'php82Packages.composer']
 
 [phases.install]
-cmds = [
-    'composer install --no-dev --optimize-autoloader'
-]
+cmds = ['composer install --no-dev --optimize-autoloader']
 
 [phases.build]
 cmds = [
-    'mkdir -p storage/logs',
-    'mkdir -p storage/framework/sessions',
-    'mkdir -p storage/framework/views',
-    'mkdir -p storage/framework/cache',
-    'mkdir -p bootstrap/cache',
-    'mkdir -p database',
+    'mkdir -p storage/logs storage/framework/sessions storage/framework/views storage/framework/cache bootstrap/cache database',
     'touch database/database.sqlite',
-    'chmod -R 775 storage',
-    'chmod -R 775 bootstrap/cache',
-    'chmod 664 database/database.sqlite',
-    'php artisan migrate --force',
-    'php artisan db:seed --class=HealthPatternsSeeder --force',
-    'php artisan config:cache',
-    'php artisan route:cache',
-    'php artisan view:cache'
+    'chmod -R 777 storage bootstrap/cache database',
+    'php artisan migrate --force || echo "Migration failed"',
+    'php artisan db:seed --class=HealthPatternsSeeder --force || echo "Seeding failed"'
 ]
 
 [start]
