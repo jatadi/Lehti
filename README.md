@@ -1,201 +1,225 @@
-# Lehti - Smart Symptom Pattern Alerts
+# Lehti - AI-Powered Personal Health Tracker
 
-A focused health tracking system that detects unusual patterns and possible treatment-symptom relationships in user health logs, then surfaces concise, actionable alerts. Built as a portfolio project demonstrating proficiency with **Laravel/PHP, MySQL, REST APIs**, and data analytics.
+**Lehti** is an intelligent health tracking application that helps you discover patterns in your symptoms and treatments through AI-powered insights. Turn your health data into actionable knowledge.
 
-## 🎯 Purpose & Fit
+![Lehti Dashboard](https://img.shields.io/badge/Status-Production%20Ready-brightgreen)
+![Laravel 11](https://img.shields.io/badge/Laravel-11.x-red)
+![PHP 8.2](https://img.shields.io/badge/PHP-8.2+-blue)
+![SQLite](https://img.shields.io/badge/Database-SQLite-lightblue)
 
-This project aligns with Folia Health's mission to make personal health data useful by adding lightweight analytics on top of Health Record Observations (HRO) style logs. It demonstrates:
+## 📱 Screenshots
 
-- **Healthcare Domain Knowledge**: Understanding of patient-driven health tracking
-- **Technical Skills**: Laravel, MySQL, JWT authentication, REST APIs
-- **Data Analytics**: Pattern detection algorithms for health insights
-- **Product Thinking**: Narrow, valuable enhancement with clear MVP scope
+### Dashboard Overview
+*Your personalized health insights at a glance - view your health stats, use quick action buttons to log symptoms or treatments, and follow the getting started guide for new users.*
 
-## 🚀 Quick Start
+![Dashboard](screenshots/dashboard.png)
+
+### Symptom Tracking
+*Select the type and severity of your symptom, add notes, and set the time - everything gets reflected in the recent symptoms tab with timestamps and color-coded severity indicators.*
+
+![Symptom Logging](screenshots/symptoms.png)
+
+### Treatment Management  
+*Choose from different treatment types (medication, supplement, exercise, therapy, etc.) with proper emojis, enter dosage and notes - all treatments appear in your history with visual type indicators.*
+
+![Treatment Management](screenshots/treatments.png)
+
+### AI-Powered Insights
+*View AI-generated health patterns with confidence levels, resolve alerts when you've acted on them, and filter between active and resolved insights to track your progress.*
+
+![Health Insights](screenshots/alerts.png)
+
+### Mobile Experience
+*Fully responsive design optimized for mobile use - all features work seamlessly on phones with touch-friendly interfaces and accessible navigation.*
+
+<div align="center">
+  <img src="screenshots/mobile-dashboard.png" alt="Mobile Dashboard" width="300"/>
+  <img src="screenshots/mobile-symptoms.png" alt="Mobile Symptoms" width="300"/>
+</div>
+
+## ✨ Features
+
+### 🏥 **Health Tracking**
+- **Symptom Logging**: Track 13 different symptom types with severity ratings (1-10)
+- **Treatment Management**: Log medications, supplements, exercises, therapies, and lifestyle changes
+- **Rich Data Types**: Notes, timestamps, dosages, and treatment categories
+
+### 🤖 **AI-Powered Insights**
+- **Pattern Recognition**: Discover correlations between treatments and symptom improvements
+- **Predictive Alerts**: Get notified when symptoms might spike based on historical patterns  
+- **Treatment Effectiveness**: See which interventions work best for you
+- **Side Effect Detection**: Identify potential adverse reactions to treatments
+
+### 📊 **Comprehensive Dashboard**
+- **Health Overview**: Real-time stats on symptoms, treatments, and insights
+- **Quick Actions**: One-click access to log symptoms or treatments
+- **Getting Started Guide**: Step-by-step onboarding for new users
+- **Progress Tracking**: Monitor your health journey over time
+
+### 🔔 **Smart Alerts System**
+- **Post-Treatment Analysis**: "Headaches improve 2-4 hours after Ibuprofen"
+- **Symptom Spikes**: "Poor mood often precedes severe headaches"
+- **Co-occurrence Patterns**: "Walking correlates with reduced pain levels"
+- **Resolvable Insights**: Mark patterns as acknowledged and acted upon
+
+## 🚀 Live Demo
+
+Access the live application at: **[Your Deployment URL]**
+
+**Demo Credentials:**
+- Email: `demo@folia.com`
+- Password: `password123`
+
+*The demo includes 30+ days of realistic health data with AI-generated insights.*
+
+## 🛠️ Technology Stack
+
+### Backend
+- **Laravel 11** 
+- **SQLite** 
+- **JWT Authentication** 
+- **Eloquent ORM** 
+
+### Frontend
+- **JavaScript** 
+- **CSS** 
+- **Responsive Design** 
+- **RESTful API** 
+
+### Infrastructure
+- **Railway/Render** - Cloud deployment platform
+- **Git** - Version control with GitHub
+- **Composer** - PHP dependency management
+
+## 📖 Installation & Setup
 
 ### Prerequisites
-- PHP 8.2+
+- PHP 8.2 or higher
 - Composer
-- SQLite (included) or MySQL
+- SQLite
+- Git
 
-### Installation
+### Local Development
 
-```bash
-# Clone and setup
-git clone [your-repo-url]
-cd lehti
-composer install
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/yourusername/lehti.git
+   cd lehti
+   ```
 
-# Database setup
-php artisan migrate --seed
+2. **Install dependencies**
+   ```bash
+   composer install
+   ```
 
-# Start development server
-php artisan serve
-```
+3. **Environment setup**
+   ```bash
+   cp .env.example .env
+   php artisan key:generate
+   ```
 
-The seeder creates demo users:
-- **Email**: `demo@folia.com`, **Password**: `password123`
-- **Email**: `test@folia.com`, **Password**: `password123`
+4. **Database setup**
+   ```bash
+   touch database/database.sqlite
+   php artisan migrate
+   php artisan db:seed --class=HealthPatternsSeeder
+   ```
 
-## 📊 Features Implemented
+5. **Start the development server**
+   ```bash
+   php artisan serve
+   ```
 
-### ✅ Core Health Tracking
-- **Symptom Logs**: Track fatigue, pain, nausea, headache, mood, sleep quality, appetite, energy (0-10 scale)
-- **Treatments**: Record medications, supplements with dosage and timing
-- **User Management**: JWT-based authentication and user isolation
+6. **Access the application**
+   - Open `http://localhost:8000` in your browser
+   - Login with `demo@folia.com` / `password123`
 
-### ✅ Data Model & API
-- RESTful APIs for all CRUD operations
-- Comprehensive filtering (date ranges, symptom types, severity)
-- User-scoped data access with proper authorization
-- JSON API responses with pagination
 
-### ✅ Synthetic Data & Patterns
-- 60 days of realistic health data per user
-- Post-treatment pattern simulation (fatigue spikes 2-3 days after "Treatment A")
-- Weekly pain spike patterns
-- Random symptom variations with realistic baselines
+### Environment Variables
 
-### ✅ Basic Alert System
-- Pre-generated example alerts showing pattern detection
-- Alert severity ranking (1-5 scale)
-- Resolution tracking and user management
-
-## 🔧 API Endpoints
-
-### Authentication
-```bash
-POST /api/auth/register     # Register new user
-POST /api/auth/login        # Login and get JWT token
-GET  /api/auth/me          # Get authenticated user
-POST /api/auth/logout      # Invalidate token
-POST /api/auth/refresh     # Refresh JWT token
-```
-
-### Symptom Logs
-```bash
-GET    /api/symptom-logs              # List with filters (?symptom=fatigue&from=2024-01-01)
-POST   /api/symptom-logs              # Create new log
-GET    /api/symptom-logs/{id}         # Show specific log
-PUT    /api/symptom-logs/{id}         # Update log
-DELETE /api/symptom-logs/{id}         # Delete log
-```
-
-### Treatments
-```bash
-GET    /api/treatments                # List with filters (?name=Treatment+A&from=2024-01-01)
-POST   /api/treatments                # Create new treatment
-GET    /api/treatments/{id}           # Show specific treatment
-PUT    /api/treatments/{id}           # Update treatment
-DELETE /api/treatments/{id}           # Delete treatment
-```
-
-### Alerts
-```bash
-GET  /api/alerts                      # List alerts (?type=spike&resolved=false)
-GET  /api/alerts/{id}                 # Show specific alert
-POST /api/alerts/{id}/resolve         # Mark alert as resolved
-POST /api/alerts/recompute            # Trigger pattern detection (placeholder)
-```
-
-## 📋 Example API Usage
-
-### Login and Get Token
-```bash
-curl -X POST http://localhost:8000/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"email":"demo@folia.com","password":"password123"}'
-```
-
-### Create Symptom Log
-```bash
-curl -X POST http://localhost:8000/api/symptom-logs \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "symptom": "fatigue",
-    "severity": 7,
-    "notes": "after long day",
-    "occurred_at": "2024-08-19T20:15:00Z"
-  }'
-```
-
-### Get Alerts
-```bash
-curl -X GET http://localhost:8000/api/alerts \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN"
-```
-
-## 🏗️ Architecture
-
-```
-Client (Web/Mobile) → Laravel REST API → SQLite Database
-                           ↓
-                    Pattern Engine → Alerts
 ```
 
 ### Database Schema
-- **users**: Authentication and user management
-- **symptom_logs**: Health symptoms with severity (0-10) and timestamps
-- **treatments**: Medications/supplements with dosage and timing
-- **alerts**: Pattern detection results with severity ranking
 
-### Key Models & Relationships
-- `User` has many `SymptomLog`, `Treatment`, `Alert`
-- Rich query scopes for filtering and pattern analysis
-- JSON casting for alert details and metadata
+The application uses four main tables:
+- `users` - User accounts and authentication
+- `symptom_logs` - Individual symptom entries with severity and notes
+- `treatments` - Treatment/intervention records with types and dosages  
+- `alerts` - AI-generated health insights and patterns
 
-## 🎯 What This Demonstrates
+## 🎯 Usage Guide
 
-### Technical Skills
-- **Backend**: Laravel 11, PHP 8.2+, Eloquent ORM, JWT authentication
-- **Database**: MySQL/SQLite schema design, migrations, seeders
-- **API Design**: RESTful endpoints, validation, filtering, pagination
-- **Security**: JWT tokens, user-scoped data access, input validation
+### 1. **Getting Started**
+- Register a new account or use the demo credentials
+- Follow the 3-step onboarding guide on the dashboard
+- Start by logging your first symptom
 
-### Healthcare Domain Understanding
-- **HRO Concepts**: Patient-driven health data collection
-- **Clinical Patterns**: Post-treatment effects, symptom baselines, spike detection
-- **User Experience**: Healthcare-focused API design and data structures
+### 2. **Logging Symptoms**
+- Navigate to the "Symptoms" tab
+- Select symptom type, rate severity (1-10), add notes
+- Use the date/time picker for accurate timestamps
+- Filter and search your symptom history
 
-### Product & Data Thinking
-- **MVP Scope**: Clear boundaries and focused feature set
-- **Analytics Foundation**: Data model designed for pattern detection
-- **Scalability**: Proper indexing and query optimization
+### 3. **Recording Treatments**
+- Go to the "Treatments" tab  
+- Choose treatment type (medication, supplement, exercise, etc.)
+- Enter dosage, notes, and administration time
+- View your treatment history with visual indicators
 
-## 🔮 Next Steps (Not Implemented)
+### 4. **Discovering Patterns**
+- Check the "Alerts" tab for AI-generated insights
+- Use filters to view resolved vs. unresolved patterns
+- Click "Recompute Alerts" to generate new insights
+- Mark insights as resolved when you've acted on them
 
-The following features are outlined in the original design but not implemented in this MVP:
+### 5. **Dashboard Overview**
+- Monitor your health stats at a glance
+- Use quick action buttons for rapid data entry
+- Track your progress over time
 
-### Pattern Detection Engine
-- Spike detection using rolling median + MAD
-- Post-treatment correlation analysis
-- Co-occurrence pattern identification
+## 🤖 AI Pattern Recognition
 
-### Frontend Dashboard
-- React-based alert visualization
-- Symptom trend charts with treatment markers
-- Real-time pattern insights
 
-### Advanced Features
-- Push notifications for new alerts
-- User-configurable thresholds
-- CSV export functionality
-- Background job processing
 
-### Mobile Integration
-- Swift/Kotlin client applications
-- Offline-first data sync
-- Push notification delivery
+## 🔐 Security Features
 
-## ⚠️ Disclaimer
+- **JWT Authentication** - Secure token-based auth
+- **Input Validation** - Server-side validation for all inputs
+- **SQL Injection Protection** - Eloquent ORM parameterized queries
+- **XSS Protection** - Escaped output and CSP headers
+- **Password Hashing** - Bcrypt with configurable rounds
 
-This demo application is for **educational and portfolio purposes only** and does **not** provide medical advice. It demonstrates software engineering capabilities in the healthcare domain but should not be used for actual medical decision-making.
+## 📱 API Documentation
 
----
+### Authentication Endpoints
+```bash
+POST /api/auth/register    # User registration
+POST /api/auth/login       # User login  
+POST /api/auth/logout      # User logout
+GET  /api/auth/me          # Get current user
+```
 
-## 🏥 About Folia Health
+### Symptom Endpoints
+```bash
+GET    /api/symptom-logs   # List user's symptoms
+POST   /api/symptom-logs   # Create new symptom log
+PUT    /api/symptom-logs/{id}  # Update symptom log
+DELETE /api/symptom-logs/{id}  # Delete symptom log
+```
 
-This project was inspired by Folia Health's mission to enable individuals to take an active role in their care through data-driven insights. Folia's rich longitudinal data and proprietary analytic methods provide vital missing pieces in the emergence of a home-centered, data-driven healthcare ecosystem.
+### Treatment Endpoints
+```bash
+GET    /api/treatments     # List user's treatments
+POST   /api/treatments     # Create new treatment
+PUT    /api/treatments/{id}    # Update treatment
+DELETE /api/treatments/{id}    # Delete treatment
+```
 
-**Built with ❤️ to demonstrate interest in healthcare technology and commitment to patient-centered solutions.**
+### Alert Endpoints
+```bash
+GET    /api/alerts         # List health insights
+POST   /api/alerts/recompute   # Generate new patterns
+POST   /api/alerts/{id}/resolve # Mark insight as resolved
+```
+
+
