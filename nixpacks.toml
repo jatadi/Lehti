@@ -3,10 +3,7 @@ nixPkgs = ['php82', 'nodejs_18', 'php82Packages.composer']
 
 [phases.install]
 cmds = [
-    'composer install --no-dev --optimize-autoloader',
-    'php artisan config:cache',
-    'php artisan route:cache',
-    'php artisan view:cache'
+    'composer install --no-dev --optimize-autoloader'
 ]
 
 [phases.build]
@@ -16,8 +13,16 @@ cmds = [
     'mkdir -p storage/framework/views',
     'mkdir -p storage/framework/cache',
     'mkdir -p bootstrap/cache',
+    'mkdir -p database',
+    'touch database/database.sqlite',
     'chmod -R 775 storage',
-    'chmod -R 775 bootstrap/cache'
+    'chmod -R 775 bootstrap/cache',
+    'chmod 664 database/database.sqlite',
+    'php artisan migrate --force',
+    'php artisan db:seed --class=HealthPatternsSeeder --force',
+    'php artisan config:cache',
+    'php artisan route:cache',
+    'php artisan view:cache'
 ]
 
 [start]

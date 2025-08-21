@@ -58,7 +58,7 @@
 
 ## 🚀 Live Demo
 
-Access the live application at: **[Your Deployment URL]**
+Access the live application at: 
 
 **Demo Credentials:**
 - Email: `demo@folia.com`
