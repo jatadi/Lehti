@@ -1,7 +1,7 @@
 // Lehti Health Tracker - Frontend Application
 class LehtiApp {
     constructor() {
-        this.baseURL = 'http://localhost:8000/api';
+        this.baseURL = 'http://192.168.100.172:8000/api';
         this.token = localStorage.getItem('auth_token');
         this.user = JSON.parse(localStorage.getItem('user') || 'null');
         this.currentPage = 'dashboard';
