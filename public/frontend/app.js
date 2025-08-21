@@ -565,17 +565,74 @@ class LehtiApp {
         this.loadTreatmentsList();
     }
 
-    loadAlerts() {
+    async loadAlerts() {
         const content = document.getElementById('page-content');
         content.innerHTML = `
             <div class="page-header">
                 <h1>Alerts</h1>
-                <p>View and manage health alerts</p>
+                <p>AI-powered insights from your health data</p>
             </div>
-            <div class="page-content">
-                <p>Alerts interface coming soon...</p>
+            
+            <div class="alerts-container">
+                <!-- Alert Actions -->
+                <div class="alerts-card">
+                    <h3>🔔 Alert Management</h3>
+                    <div class="alert-actions">
+                        <button id="recompute-alerts" class="btn btn-primary">
+                            <span class="btn-icon">🔄</span>
+                            Recompute Alerts
+                        </button>
+                        <div class="alert-filters">
+                            <select id="alert-filter" class="filter-select">
+                                <option value="">All alerts</option>
+                                <option value="unresolved">🔴 Unresolved</option>
+                                <option value="resolved">✅ Resolved</option>
+                            </select>
+                            <select id="alert-severity" class="filter-select">
+                                <option value="">All severity</option>
+                                <option value="high">🔴 High</option>
+                                <option value="medium">🟡 Medium</option>
+                                <option value="low">🟢 Low</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="alert-stats">
+                        <div class="stat-item">
+                            <span class="stat-number" id="total-alerts">-</span>
+                            <span class="stat-label">Total Alerts</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-number" id="unresolved-alerts">-</span>
+                            <span class="stat-label">Unresolved</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-number" id="high-severity-alerts">-</span>
+                            <span class="stat-label">High Priority</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Alerts List -->
+                <div class="alerts-card full-width">
+                    <div class="card-header">
+                        <h3>📊 Health Insights & Patterns</h3>
+                        <div class="alert-legend">
+                            <span class="legend-item">🔴 High</span>
+                            <span class="legend-item">🟡 Medium</span>
+                            <span class="legend-item">🟢 Low</span>
+                        </div>
+                    </div>
+                    <div id="alerts-list" class="alerts-list">
+                        <div class="loading-placeholder">Loading health insights...</div>
+                    </div>
+                </div>
             </div>
         `;
+
+        this.addAlertsStyles();
+        this.bindAlertEvents();
+        this.loadAlertsList();
+        this.updateAlertStats();
     }
 
     // API Methods
@@ -1055,6 +1112,214 @@ class LehtiApp {
             'other': 'Other'
         };
         return names[type] || this.capitalizeFirst(type);
+    }
+
+    // Alert Management Methods
+    bindAlertEvents() {
+        // Recompute alerts button
+        const recomputeBtn = document.getElementById('recompute-alerts');
+        if (recomputeBtn) {
+            recomputeBtn.addEventListener('click', () => {
+                this.recomputeAlerts();
+            });
+        }
+
+        // Filter change handlers
+        const alertFilter = document.getElementById('alert-filter');
+        const severityFilter = document.getElementById('alert-severity');
+        
+        if (alertFilter) {
+            alertFilter.addEventListener('change', () => {
+                this.filterAlerts();
+            });
+        }
+        
+        if (severityFilter) {
+            severityFilter.addEventListener('change', () => {
+                this.filterAlerts();
+            });
+        }
+    }
+
+    async recomputeAlerts() {
+        const btn = document.getElementById('recompute-alerts');
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '<span class="btn-icon">⏳</span> Computing...';
+        btn.disabled = true;
+
+        try {
+            await this.apiCall('POST', '/alerts/recompute');
+            this.showToast('Alerts recomputed successfully!', 'success');
+            this.loadAlertsList();
+            this.updateAlertStats();
+        } catch (error) {
+            console.error('Failed to recompute alerts:', error);
+            this.showToast('Failed to recompute alerts. Please try again.', 'error');
+        } finally {
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        }
+    }
+
+    async loadAlertsList() {
+        const listContainer = document.getElementById('alerts-list');
+        
+        try {
+            console.log('Loading alerts list...');
+            const response = await this.apiCall('GET', '/alerts');
+            console.log('Alerts API response:', response);
+            
+            if (response.data && response.data.length > 0) {
+                listContainer.innerHTML = response.data.map(alert => `
+                    <div class="alert-item" data-severity="${this.getSeverityName(alert.severity)}" data-resolved="${alert.resolved_at ? 'resolved' : 'unresolved'}">
+                        <div class="alert-indicator severity-${this.getSeverityName(alert.severity)}"></div>
+                        <div class="alert-content">
+                            <div class="alert-header">
+                                <span class="alert-title">${alert.summary}</span>
+                                <div class="alert-meta">
+                                    <span class="alert-severity severity-${this.getSeverityName(alert.severity)}">${this.getSeverityName(alert.severity).toUpperCase()}</span>
+                                    <span class="alert-time">${this.formatDate(alert.generated_at)}</span>
+                                </div>
+                            </div>
+                            ${alert.details ? `<div class="alert-description">${this.formatAlertDetails(alert.details)}</div>` : ''}
+                            <div class="alert-recommendation">💡 ${this.generateRecommendation(alert)}</div>
+                        </div>
+                        <div class="alert-actions">
+                            ${!alert.resolved_at ? `
+                                <button class="btn-icon-small resolve-btn" onclick="app.resolveAlert(${alert.id})" title="Mark as resolved">
+                                    ✅
+                                </button>
+                            ` : `
+                                <span class="resolved-indicator" title="Resolved ${this.formatDate(alert.resolved_at)}">✅</span>
+                            `}
+                        </div>
+                    </div>
+                `).join('');
+            } else {
+                listContainer.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">🔍</div>
+                        <h3>No alerts yet</h3>
+                        <p>Add more symptom and treatment data to get personalized health insights.</p>
+                        <button onclick="app.recomputeAlerts()" class="btn btn-outline">
+                            <span class="btn-icon">🔄</span>
+                            Generate Insights
+                        </button>
+                    </div>
+                `;
+            }
+        } catch (error) {
+            console.error('Failed to load alerts:', error);
+            listContainer.innerHTML = `
+                <div class="error-state">
+                    <div class="error-icon">❌</div>
+                    <h3>Failed to load alerts</h3>
+                    <p>Error: ${error.message}</p>
+                    <p>Check the browser console for details.</p>
+                </div>
+            `;
+        }
+    }
+
+    async updateAlertStats() {
+        try {
+            const response = await this.apiCall('GET', '/alerts');
+            const alerts = response.data || [];
+            
+            const totalAlerts = alerts.length;
+            const unresolvedAlerts = alerts.filter(a => !a.resolved_at).length;
+            const highSeverityAlerts = alerts.filter(a => this.getSeverityName(a.severity) === 'high' && !a.resolved_at).length;
+            
+            document.getElementById('total-alerts').textContent = totalAlerts;
+            document.getElementById('unresolved-alerts').textContent = unresolvedAlerts;
+            document.getElementById('high-severity-alerts').textContent = highSeverityAlerts;
+        } catch (error) {
+            console.error('Failed to update alert stats:', error);
+        }
+    }
+
+    filterAlerts() {
+        const statusFilter = document.getElementById('alert-filter').value;
+        const severityFilter = document.getElementById('alert-severity').value;
+        const alerts = document.querySelectorAll('.alert-item');
+        
+        alerts.forEach(alert => {
+            let showAlert = true;
+            
+            // Filter by status
+            if (statusFilter && alert.dataset.resolved !== statusFilter) {
+                showAlert = false;
+            }
+            
+            // Filter by severity
+            if (severityFilter && alert.dataset.severity !== severityFilter) {
+                showAlert = false;
+            }
+            
+            alert.style.display = showAlert ? 'flex' : 'none';
+        });
+    }
+
+    async resolveAlert(id) {
+        try {
+            await this.apiCall('POST', `/alerts/${id}/resolve`);
+            this.showToast('Alert marked as resolved', 'success');
+            this.loadAlertsList();
+            this.updateAlertStats();
+        } catch (error) {
+            console.error('Failed to resolve alert:', error);
+            this.showToast('Failed to resolve alert', 'error');
+        }
+    }
+
+    getSeverityName(severityNumber) {
+        if (severityNumber >= 7) return 'high';
+        if (severityNumber >= 4) return 'medium';
+        return 'low';
+    }
+
+    formatAlertDetails(details) {
+        if (!details) return '';
+        
+        try {
+            const detailsObj = typeof details === 'string' ? JSON.parse(details) : details;
+            let formatted = '';
+            
+            if (detailsObj.evidence) {
+                formatted += `Based on ${detailsObj.evidence.matches} out of ${detailsObj.evidence.trials} occurrences. `;
+            }
+            
+            if (detailsObj.confidence) {
+                formatted += `Confidence: ${Math.round(detailsObj.confidence * 100)}%. `;
+            }
+            
+            if (detailsObj.window_hours) {
+                formatted += `Typically occurs ${detailsObj.window_hours[0]}-${detailsObj.window_hours[1]} hours after treatment.`;
+            }
+            
+            return formatted;
+        } catch (e) {
+            return 'Additional details available.';
+        }
+    }
+
+    generateRecommendation(alert) {
+        const severity = this.getSeverityName(alert.severity);
+        
+        switch (alert.type) {
+            case 'post_treatment':
+                if (severity === 'high') {
+                    return 'Consider discussing this pattern with your healthcare provider. This treatment may not be optimal for you.';
+                } else {
+                    return 'Monitor this pattern. Consider logging symptoms more frequently around treatment times.';
+                }
+            case 'pre_symptom':
+                return 'Track potential triggers leading up to this symptom to identify preventive measures.';
+            case 'effectiveness':
+                return 'This treatment appears to be helping. Continue as prescribed and monitor consistency.';
+            default:
+                return 'Review this pattern with your healthcare provider for personalized advice.';
+        }
     }
 
     // Load saved credentials for "Remember Me" functionality
@@ -1759,6 +2024,324 @@ class LehtiApp {
         if (!document.querySelector('#treatments-styles')) {
             const styleElement = document.createElement('div');
             styleElement.id = 'treatments-styles';
+            styleElement.innerHTML = styles;
+            document.head.appendChild(styleElement);
+        }
+    }
+
+    addAlertsStyles() {
+        const styles = `
+            <style>
+            .alerts-container {
+                display: grid;
+                grid-template-columns: 1fr;
+                gap: 2rem;
+                max-width: 1200px;
+                margin: 0 auto;
+            }
+
+            .alerts-card {
+                background: var(--white);
+                border-radius: var(--radius-lg);
+                padding: 1.5rem;
+                box-shadow: var(--shadow-sm);
+                border: 1px solid var(--gray-200);
+            }
+
+            .alerts-card.full-width {
+                grid-column: 1 / -1;
+            }
+
+            .alerts-card h3 {
+                font-size: 1.25rem;
+                font-weight: 600;
+                color: var(--gray-900);
+                margin-bottom: 1.5rem;
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+            }
+
+            .alert-actions {
+                display: flex;
+                flex-direction: column;
+                gap: 1rem;
+                margin-bottom: 1.5rem;
+            }
+
+            .alert-filters {
+                display: flex;
+                gap: 1rem;
+                flex-wrap: wrap;
+            }
+
+            .alert-stats {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+                gap: 1rem;
+                margin-top: 1rem;
+            }
+
+            .stat-item {
+                text-align: center;
+                padding: 1rem;
+                background: var(--green-50);
+                border-radius: var(--radius-lg);
+                border: 1px solid var(--green-100);
+            }
+
+            .stat-number {
+                display: block;
+                font-size: 2rem;
+                font-weight: 700;
+                color: var(--primary-green);
+                line-height: 1;
+            }
+
+            .stat-label {
+                display: block;
+                font-size: 0.875rem;
+                color: var(--gray-600);
+                margin-top: 0.25rem;
+            }
+
+            .alert-legend {
+                display: flex;
+                gap: 1rem;
+                align-items: center;
+            }
+
+            .legend-item {
+                font-size: 0.875rem;
+                color: var(--gray-600);
+            }
+
+            .alerts-list {
+                display: flex;
+                flex-direction: column;
+                gap: 1rem;
+                max-height: 600px;
+                overflow-y: auto;
+            }
+
+            .alert-item {
+                display: flex;
+                align-items: flex-start;
+                gap: 1rem;
+                padding: 1.5rem;
+                background: var(--white);
+                border-radius: var(--radius-lg);
+                border: 1px solid var(--gray-200);
+                transition: all 0.2s ease;
+                position: relative;
+            }
+
+            .alert-item:hover {
+                transform: translateY(-1px);
+                box-shadow: var(--shadow-md);
+                border-color: var(--primary-green);
+            }
+
+            .alert-indicator {
+                width: 8px;
+                height: 100%;
+                border-radius: var(--radius-sm);
+                flex-shrink: 0;
+                min-height: 60px;
+            }
+
+            .alert-indicator.severity-high {
+                background: var(--error);
+                box-shadow: 0 0 8px rgba(239, 68, 68, 0.3);
+            }
+
+            .alert-indicator.severity-medium {
+                background: var(--warning);
+                box-shadow: 0 0 8px rgba(245, 158, 11, 0.3);
+            }
+
+            .alert-indicator.severity-low {
+                background: var(--success);
+                box-shadow: 0 0 8px rgba(16, 185, 129, 0.3);
+            }
+
+            .alert-content {
+                flex: 1;
+                min-width: 0;
+            }
+
+            .alert-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: flex-start;
+                margin-bottom: 0.75rem;
+                gap: 1rem;
+            }
+
+            .alert-title {
+                font-weight: 600;
+                color: var(--gray-900);
+                font-size: 1.125rem;
+                line-height: 1.4;
+            }
+
+            .alert-meta {
+                display: flex;
+                flex-direction: column;
+                align-items: flex-end;
+                gap: 0.25rem;
+                flex-shrink: 0;
+            }
+
+            .alert-severity {
+                font-size: 0.75rem;
+                font-weight: 600;
+                padding: 0.25rem 0.5rem;
+                border-radius: var(--radius-sm);
+                text-transform: uppercase;
+                letter-spacing: 0.05em;
+            }
+
+            .alert-severity.severity-high {
+                background: rgba(239, 68, 68, 0.1);
+                color: var(--error);
+            }
+
+            .alert-severity.severity-medium {
+                background: rgba(245, 158, 11, 0.1);
+                color: var(--warning);
+            }
+
+            .alert-severity.severity-low {
+                background: rgba(16, 185, 129, 0.1);
+                color: var(--success);
+            }
+
+            .alert-time {
+                font-size: 0.875rem;
+                color: var(--gray-500);
+            }
+
+            .alert-description {
+                font-size: 0.875rem;
+                color: var(--gray-700);
+                line-height: 1.5;
+                margin-bottom: 0.75rem;
+            }
+
+            .alert-recommendation {
+                font-size: 0.875rem;
+                color: var(--primary-green);
+                background: var(--green-50);
+                padding: 0.75rem;
+                border-radius: var(--radius-md);
+                border-left: 3px solid var(--primary-green);
+                line-height: 1.5;
+            }
+
+            .alert-actions {
+                display: flex;
+                flex-direction: column;
+                gap: 0.5rem;
+                flex-shrink: 0;
+            }
+
+            .resolve-btn {
+                background: var(--success);
+                color: var(--white);
+                border: none;
+                padding: 0.5rem;
+                border-radius: var(--radius-md);
+                cursor: pointer;
+                font-size: 1rem;
+                transition: all 0.2s ease;
+            }
+
+            .resolve-btn:hover {
+                background: #16A34A;
+                transform: scale(1.05);
+            }
+
+            .resolved-indicator {
+                color: var(--success);
+                font-size: 1.25rem;
+                opacity: 0.7;
+            }
+
+            .empty-state {
+                text-align: center;
+                padding: 3rem 2rem;
+                color: var(--gray-600);
+            }
+
+            .empty-state .empty-icon {
+                font-size: 4rem;
+                margin-bottom: 1rem;
+                opacity: 0.5;
+            }
+
+            .empty-state h3 {
+                color: var(--gray-800);
+                margin-bottom: 0.5rem;
+                font-size: 1.25rem;
+            }
+
+            .empty-state p {
+                margin-bottom: 1.5rem;
+                color: var(--gray-600);
+            }
+
+            @media (min-width: 768px) {
+                .alerts-container {
+                    grid-template-columns: 1fr 2fr;
+                }
+                
+                .alert-actions {
+                    flex-direction: row;
+                    align-items: center;
+                    justify-content: space-between;
+                }
+                
+                .alert-filters {
+                    flex-direction: row;
+                }
+            }
+
+            @media (max-width: 768px) {
+                .alert-header {
+                    flex-direction: column;
+                    align-items: flex-start;
+                    gap: 0.5rem;
+                }
+                
+                .alert-meta {
+                    flex-direction: row;
+                    align-items: center;
+                    gap: 0.5rem;
+                }
+                
+                .alert-filters {
+                    flex-direction: column;
+                }
+                
+                .alerts-container {
+                    gap: 1rem;
+                }
+                
+                .stat-item {
+                    padding: 0.75rem;
+                }
+                
+                .stat-number {
+                    font-size: 1.5rem;
+                }
+            }
+            </style>
+        `;
+        
+        if (!document.querySelector('#alerts-styles')) {
+            const styleElement = document.createElement('div');
+            styleElement.id = 'alerts-styles';
             styleElement.innerHTML = styles;
             document.head.appendChild(styleElement);
         }
