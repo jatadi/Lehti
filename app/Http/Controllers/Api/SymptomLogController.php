@@ -46,7 +46,7 @@ class SymptomLogController extends Controller
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'symptom' => 'required|in:fatigue,pain,nausea,headache,mood,sleep_quality,appetite,energy',
+            'symptom' => 'required|in:fatigue,pain,nausea,headache,dizziness,insomnia,anxiety,fever,mood,sleep_quality,appetite,energy,other',
             'severity' => 'required|integer|min:0|max:10',
             'notes' => 'nullable|string|max:1000',
             'occurred_at' => 'required|date',

@@ -386,7 +386,7 @@ class LehtiApp {
                         <div class="form-row">
                             <div class="form-group">
                                 <label for="symptom-type">Symptom Type</label>
-                                <select id="symptom-type" name="type" required>
+                                <select id="symptom-type" name="symptom" required>
                                     <option value="">Select symptom type</option>
                                     <option value="fatigue">💤 Fatigue</option>
                                     <option value="pain">⚡ Pain</option>
@@ -396,6 +396,10 @@ class LehtiApp {
                                     <option value="insomnia">🌙 Insomnia</option>
                                     <option value="anxiety">😰 Anxiety</option>
                                     <option value="fever">🌡️ Fever</option>
+                                    <option value="mood">😔 Mood</option>
+                                    <option value="sleep_quality">🛏️ Sleep Quality</option>
+                                    <option value="appetite">🍽️ Appetite</option>
+                                    <option value="energy">⚡ Energy</option>
                                     <option value="other">📋 Other</option>
                                 </select>
                             </div>
@@ -442,10 +446,19 @@ class LehtiApp {
                         <div class="filter-controls">
                             <select id="symptom-filter" class="filter-select">
                                 <option value="">All symptoms</option>
-                                <option value="fatigue">Fatigue</option>
-                                <option value="pain">Pain</option>
-                                <option value="nausea">Nausea</option>
-                                <option value="headache">Headache</option>
+                                <option value="fatigue">💤 Fatigue</option>
+                                <option value="pain">⚡ Pain</option>
+                                <option value="nausea">🤢 Nausea</option>
+                                <option value="headache">🤕 Headache</option>
+                                <option value="dizziness">💫 Dizziness</option>
+                                <option value="insomnia">🌙 Insomnia</option>
+                                <option value="anxiety">😰 Anxiety</option>
+                                <option value="fever">🌡️ Fever</option>
+                                <option value="mood">😔 Mood</option>
+                                <option value="sleep_quality">🛏️ Sleep Quality</option>
+                                <option value="appetite">🍽️ Appetite</option>
+                                <option value="energy">⚡ Energy</option>
+                                <option value="other">📋 Other</option>
                             </select>
                         </div>
                     </div>
@@ -567,17 +580,22 @@ class LehtiApp {
         if (!severityDisplay) return;
 
         const severity = parseInt(value);
-        let color = 'var(--primary-green)';
+        let backgroundColor = 'var(--primary-green)';
+        let textColor = 'var(--white)';
         
         if (severity <= 3) {
-            color = 'var(--success)';
+            backgroundColor = '#22C55E'; // bright green
+            textColor = 'var(--white)';
         } else if (severity <= 6) {
-            color = 'var(--warning)';
+            backgroundColor = 'var(--warning)';
+            textColor = 'var(--white)';
         } else {
-            color = 'var(--error)';
+            backgroundColor = 'var(--error)';
+            textColor = 'var(--white)';
         }
         
-        severityDisplay.style.color = color;
+        severityDisplay.style.backgroundColor = backgroundColor;
+        severityDisplay.style.color = textColor;
         severityDisplay.style.fontWeight = '600';
     }
 
@@ -587,23 +605,39 @@ class LehtiApp {
         const formData = new FormData(form);
 
         const symptomData = {
-            type: formData.get('type'),
+            symptom: formData.get('symptom'),
             severity: parseInt(formData.get('severity')),
             notes: formData.get('notes') || null,
             occurred_at: formData.get('occurred_at')
         };
 
+        // Debug logging
+        console.log('Form data being submitted:', symptomData);
+
         // Validation
-        if (!symptomData.type || !symptomData.severity || !symptomData.occurred_at) {
+        if (!symptomData.symptom || !symptomData.severity || !symptomData.occurred_at) {
             this.showToast('Please fill in all required fields', 'error');
+            console.log('Validation failed:', {
+                symptom: !!symptomData.symptom,
+                severity: !!symptomData.severity,
+                occurred_at: !!symptomData.occurred_at
+            });
             return;
         }
+
+        // Convert datetime to proper format for Laravel
+        const formattedData = {
+            ...symptomData,
+            occurred_at: new Date(symptomData.occurred_at).toISOString().slice(0, 19).replace('T', ' ')
+        };
+
+        console.log('Formatted data for API:', formattedData);
 
         this.setFormLoading(form, true);
         submitBtn.innerHTML = '<span class="btn-icon">⏳</span> Logging...';
 
         try {
-            const response = await this.apiCall('POST', '/symptom-logs', symptomData);
+            const response = await this.apiCall('POST', '/symptom-logs', formattedData);
             
             if (response) {
                 this.showToast('Symptom logged successfully!', 'success');
@@ -617,12 +651,16 @@ class LehtiApp {
             }
         } catch (error) {
             console.error('Symptom submission error:', error);
+            console.error('Full error response:', error.message);
+            
             let errorMessage = 'Failed to log symptom. Please try again.';
             
             if (error.message.includes('422')) {
-                errorMessage = 'Please check your input and try again.';
+                errorMessage = 'Validation error. Check the browser console for details.';
             } else if (error.message.includes('500')) {
                 errorMessage = 'Server error. Please try again later.';
+            } else if (error.message.includes('401')) {
+                errorMessage = 'Authentication error. Please login again.';
             }
             
             this.showToast(errorMessage, 'error');
@@ -640,11 +678,11 @@ class LehtiApp {
             
             if (response.data && response.data.length > 0) {
                 listContainer.innerHTML = response.data.map(symptom => `
-                    <div class="symptom-item" data-type="${symptom.type}">
-                        <div class="symptom-icon">${this.getSymptomEmoji(symptom.type)}</div>
+                    <div class="symptom-item" data-symptom="${symptom.symptom}">
+                        <div class="symptom-icon">${this.getSymptomEmoji(symptom.symptom)}</div>
                         <div class="symptom-content">
                             <div class="symptom-header">
-                                <span class="symptom-type">${this.capitalizeFirst(symptom.type)}</span>
+                                <span class="symptom-type">${this.formatSymptomName(symptom.symptom)}</span>
                                 <span class="symptom-severity severity-${this.getSeverityLevel(symptom.severity)}">${symptom.severity}/10</span>
                             </div>
                             <div class="symptom-time">${this.formatDate(symptom.occurred_at)}</div>
@@ -675,13 +713,13 @@ class LehtiApp {
         }
     }
 
-    filterSymptoms(type) {
+    filterSymptoms(symptom) {
         const symptoms = document.querySelectorAll('.symptom-item');
-        symptoms.forEach(symptom => {
-            if (!type || symptom.dataset.type === type) {
-                symptom.style.display = 'flex';
+        symptoms.forEach(item => {
+            if (!symptom || item.dataset.symptom === symptom) {
+                item.style.display = 'flex';
             } else {
-                symptom.style.display = 'none';
+                item.style.display = 'none';
             }
         });
     }
@@ -700,7 +738,7 @@ class LehtiApp {
         }
     }
 
-    getSymptomEmoji(type) {
+    getSymptomEmoji(symptom) {
         const emojis = {
             'fatigue': '💤',
             'pain': '⚡',
@@ -710,9 +748,32 @@ class LehtiApp {
             'insomnia': '🌙',
             'anxiety': '😰',
             'fever': '🌡️',
+            'mood': '😔',
+            'sleep_quality': '🛏️',
+            'appetite': '🍽️',
+            'energy': '⚡',
             'other': '📋'
         };
-        return emojis[type] || '📋';
+        return emojis[symptom] || '📋';
+    }
+
+    formatSymptomName(symptom) {
+        const names = {
+            'fatigue': 'Fatigue',
+            'pain': 'Pain',
+            'nausea': 'Nausea',
+            'headache': 'Headache',
+            'dizziness': 'Dizziness',
+            'insomnia': 'Insomnia',
+            'anxiety': 'Anxiety',
+            'fever': 'Fever',
+            'mood': 'Mood',
+            'sleep_quality': 'Sleep Quality',
+            'appetite': 'Appetite',
+            'energy': 'Energy',
+            'other': 'Other'
+        };
+        return names[symptom] || this.capitalizeFirst(symptom);
     }
 
     getSeverityLevel(severity) {
