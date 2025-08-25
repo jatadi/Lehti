@@ -29,17 +29,15 @@ Route::group(['prefix' => 'auth'], function () {
     });
 });
 
-// Protected API routes
-Route::middleware('auth:api')->group(function () {
-    // Symptom logs CRUD
-    Route::apiResource('symptom-logs', SymptomLogController::class);
-    
-    // Treatments CRUD
-    Route::apiResource('treatments', TreatmentController::class);
-    
-    // Alerts
-    Route::get('alerts', [AlertController::class, 'index']);
-    Route::get('alerts/{id}', [AlertController::class, 'show']);
-    Route::post('alerts/{id}/resolve', [AlertController::class, 'resolve']);
-    Route::post('alerts/recompute', [AlertController::class, 'recompute']);
-});
+// Demo API routes (no authentication required)
+// Symptom logs CRUD
+Route::apiResource('symptom-logs', SymptomLogController::class);
+
+// Treatments CRUD
+Route::apiResource('treatments', TreatmentController::class);
+
+// Alerts
+Route::get('alerts', [AlertController::class, 'index']);
+Route::get('alerts/{id}', [AlertController::class, 'show']);
+Route::post('alerts/{id}/resolve', [AlertController::class, 'resolve']);
+Route::post('alerts/recompute', [AlertController::class, 'recompute']);

@@ -15,7 +15,8 @@ class AlertController extends Controller
      */
     public function index(Request $request)
     {
-        $query = auth()->user()->alerts();
+        $demoUser = User::where('email', 'demo@folia.com')->first();
+        $query = $demoUser->alerts();
 
         // Filter by alert type
         if ($request->has('type')) {
@@ -47,7 +48,8 @@ class AlertController extends Controller
      */
     public function show($id)
     {
-        $alert = auth()->user()->alerts()->findOrFail($id);
+        $demoUser = User::where('email', 'demo@folia.com')->first();
+        $alert = $demoUser->alerts()->findOrFail($id);
         
         return response()->json($alert);
     }
@@ -57,7 +59,8 @@ class AlertController extends Controller
      */
     public function resolve($id)
     {
-        $alert = auth()->user()->alerts()->findOrFail($id);
+        $demoUser = User::where('email', 'demo@folia.com')->first();
+        $alert = $demoUser->alerts()->findOrFail($id);
         $alert->resolve();
 
         return response()->json([
@@ -75,7 +78,7 @@ class AlertController extends Controller
         // For now, return a placeholder response
         return response()->json([
             'message' => 'Alert recomputation triggered',
-            'user_id' => auth()->id()
+            'user_id' => 1
         ]);
     }
 }

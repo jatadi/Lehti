@@ -17,7 +17,8 @@ class TreatmentController extends Controller
      */
     public function index(Request $request)
     {
-        $query = auth()->user()->treatments();
+        $demoUser = User::where('email', 'demo@folia.com')->first();
+        $query = $demoUser->treatments();
 
         // Filter by treatment name
         if ($request->has('name')) {
@@ -51,7 +52,7 @@ class TreatmentController extends Controller
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
-        $treatment = auth()->user()->treatments()->create([
+        $treatment = $demoUser->treatments()->create([
             'name' => $request->name,
             'type' => $request->type,
             'dose' => $request->dosage, // Map dosage to dose field
@@ -67,7 +68,8 @@ class TreatmentController extends Controller
      */
     public function show($id)
     {
-        $treatment = auth()->user()->treatments()->findOrFail($id);
+        $demoUser = User::where('email', 'demo@folia.com')->first();
+        $treatment = $demoUser->treatments()->findOrFail($id);
         
         return response()->json($treatment);
     }
@@ -87,7 +89,8 @@ class TreatmentController extends Controller
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
-        $treatment = auth()->user()->treatments()->findOrFail($id);
+        $demoUser = User::where('email', 'demo@folia.com')->first();
+        $treatment = $demoUser->treatments()->findOrFail($id);
         
         $updateData = array_filter($request->only(['name', 'dose', 'administered_at']));
         
@@ -105,7 +108,8 @@ class TreatmentController extends Controller
      */
     public function destroy($id)
     {
-        $treatment = auth()->user()->treatments()->findOrFail($id);
+        $demoUser = User::where('email', 'demo@folia.com')->first();
+        $treatment = $demoUser->treatments()->findOrFail($id);
         $treatment->delete();
 
         return response()->json(['message' => 'Treatment deleted successfully']);

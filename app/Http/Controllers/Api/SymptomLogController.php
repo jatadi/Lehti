@@ -17,7 +17,9 @@ class SymptomLogController extends Controller
      */
     public function index(Request $request)
     {
-        $query = auth()->user()->symptomLogs()->with('user');
+        // Use demo user for simplified demo
+        $demoUser = User::where('email', 'demo@folia.com')->first();
+        $query = $demoUser->symptomLogs()->with('user');
 
         // Filter by symptom
         if ($request->has('symptom')) {
@@ -56,7 +58,7 @@ class SymptomLogController extends Controller
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
-        $symptomLog = auth()->user()->symptomLogs()->create([
+        $symptomLog = $demoUser->symptomLogs()->create([
             'symptom' => $request->symptom,
             'severity' => $request->severity,
             'notes' => $request->notes,
@@ -71,7 +73,8 @@ class SymptomLogController extends Controller
      */
     public function show($id)
     {
-        $symptomLog = auth()->user()->symptomLogs()->findOrFail($id);
+        $demoUser = User::where('email', 'demo@folia.com')->first();
+        $symptomLog = $demoUser->symptomLogs()->findOrFail($id);
         
         return response()->json($symptomLog);
     }
@@ -92,7 +95,7 @@ class SymptomLogController extends Controller
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
-        $symptomLog = auth()->user()->symptomLogs()->findOrFail($id);
+        $symptomLog = $demoUser->symptomLogs()->findOrFail($id);
         
         $updateData = array_filter($request->only(['symptom', 'severity', 'notes', 'occurred_at']));
         
@@ -110,7 +113,8 @@ class SymptomLogController extends Controller
      */
     public function destroy($id)
     {
-        $symptomLog = auth()->user()->symptomLogs()->findOrFail($id);
+        $demoUser = User::where('email', 'demo@folia.com')->first();
+        $symptomLog = $demoUser->symptomLogs()->findOrFail($id);
         $symptomLog->delete();
 
         return response()->json(['message' => 'Symptom log deleted successfully']);
